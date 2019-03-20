@@ -1,0 +1,46 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<title>Loading...</title>
+
+	<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+	
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+	
+	<link href="maturity.css" rel="stylesheet" />
+	<script src="maturity.js"></script>
+
+</head>
+<body>
+	<div id="loader"></div>
+	<div id="error">
+		Ooops! Something wrong happened!
+	</div>
+	<div id="content">
+		
+		<header>
+			<h2 class="name"></h2>
+			
+			<div id="badge-container">
+				<img id="badge" src="https://img.shields.io/badge/pending-none-lightgrey.svg" /><br><br>
+				<input id="badge-markdown" />
+				<button class="btn btn-info" id="copy-markdown">copy markdown code</button>
+			</div>
+		</header>
+		
+		<div id="markdown-content">
+		</div>
+		
+		<div id="rules-content">
+		</div>
+			
+		<footer>
+			<p><b class="name"></b> - Version <b class="version"></b> (<i class="release-at"></i>)</p>
+		</footer>
+		
+	</div>
+
+</body>
+</html>
