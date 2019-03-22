@@ -181,29 +181,54 @@ function showTitle(data) {
 	if (data.projects != null) {
 		mode = "projects";
 		$("#send-pr-manually-mode").hide();
-		console.log("pp");
 
 		$("#header").html("<h1>maturity for:</h1> <ul></ul>");
+		$("#projects-details").html("Includes: <ul class=\"pj-includes\"></ul><br>Ignores: <ul class=\"pj-ignores\"></ul>");
 			
-		for (var i = data.projects.length - 1; i >= 0; i--) {
-			$("#header ul").append("<li><b><a target=\"_blank\" href=\"https://github.com/" + data.projects[i] + "\">" + data.projects[i] + "</a></b></li>");				
+		for (var i = data.projects_maturity.length - 1; i >= 0; i--) {
+			
+			var cur = data.projects_maturity[i];
+
+			var github_link = "<b><a target=\"_blank\" href=\"https://github.com/" + cur.project + "\">" + cur.project + "</a></b>";
+			var badge = "<a target=\"_blank\" href=\"index.html?project=" + cur.project + "&token=" + lastResult.token + "\"><img src=\"" + cur.maturity.badge + "\" /></a>";
+
+			$("#header ul").append("<li>" + github_link + "</li>");				
+			$("#projects-details ul.pj-includes").append("<li>" + badge + " - " + github_link + "</li>");				
+		}
+
+		for (var i = data.ignored_maturity.length - 1; i >= 0; i--) {
+			
+			var cur = data.ignored_maturity[i];
+
+			var github_link = "<b><a target=\"_blank\" href=\"https://github.com/" + cur.project + "\">" + cur.project + "</a></b>";
+			var badge = "<a target=\"_blank\" href=\"index.html?project=" + cur.project + "&token=" + lastResult.token + "\"><img src=\"" + cur.maturity.badge + "\" /></a>";
+
+			$("#header ul").append("<li>" + github_link + "</li>");				
+			$("#projects-details ul.pj-ignores").append("<li>" + badge + " - " + github_link + "</li>");				
+		}
+
+		if (data.projects_maturity.length == 0) {
+			$("#projects-details ul.pj-includes").append("<li>no projects</li>");		
+		}
+
+		if (data.ignored_maturity.length == 0) {
+			$("#projects-details ul.pj-ignores").append("<li>no projects</li>");
 		}
 
 		$("#maturity-markdown").hide();
 		$("#tab-info").hide();
-		$("#tab-badge").click();
-
+		$("#tab-projects").show();
+		$("#tab-projects").click();
 
 	} else if (data.project != null) {
-		console.log("p");
 		mode = "project";
 		$("#send-pr-manually-mode").hide();
-
+		$("#tab-projects").hide();
 		$("#header h1").html("maturity for <b><a target=\"_blank\" href=\"https://github.com/" + data.project + "\">" + data.project + "</a></b>");
 	} else {
 		mode = "manually";
 		$("#send-pr-manually-mode").show();
-
+		$("#tab-projects").hide();
 		$("#header h1").html("processed maturity");
 	}
 }

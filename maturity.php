@@ -60,6 +60,7 @@ function getBadgeMarkdown($data)
 	$current_url = getCurrentUrl("details");
 
 	$view_url = str_replace("maturity.php", "index.html", $current_url);
+	$view_url = str_replace("projects=", "project=", $view_url);
 
 	return "[![$label]($current_url&command=badge_image)]($view_url)"; 
 }
@@ -118,6 +119,8 @@ function getData()
 		$data["maturity_data"] = $temp["maturity_data"] ;
 		$data["maturity_model"] = $temp["maturity_model"];
 		$data["maturity"] = $temp["maturity"];
+		$data["projects_maturity"] = $temp["projects_maturity"];
+		$data["ignored_maturity"] = $temp["ignored_maturity"];
 	}
 
 	else if ($json != null) 
@@ -168,9 +171,11 @@ function getProjectMaturityData($project, $token)
 function getProjectsMaturityData($projects, $token) 
 {
 	$maturity_data_arr = [];
+	$ignored_maturity_data_arr = [];
 	
 	foreach($projects as &$project)
 	{
+		$temp["project"] = $project;
 		$temp["maturity_data"] =  getProjectMaturityData($project, $token);
 		
 		$ignored = false;
@@ -193,6 +198,12 @@ function getProjectsMaturityData($projects, $token)
 			{
 				array_push($maturity_data_arr, $temp);
 			}
+		} 
+		else
+		{
+			$temp["maturity_model"] = getMaturityModel($temp["maturity_data"]["version_json"]);
+			$temp["maturity"] = processMaturity($temp);
+			array_push($ignored_maturity_data_arr, $temp);
 		}
 	}
 
@@ -213,10 +224,12 @@ function getProjectsMaturityData($projects, $token)
 
 	if (isset($maturity["maturity"]) == false)
 	{
+		$maturity["maturity"] = emptyMaturityModel();
 		$maturity["maturity"]["version_json"] = "none";
 	}
 
 	$maturity["projects_maturity"] = $maturity_data_arr;
+	$maturity["ignored_maturity"] = $ignored_maturity_data_arr;
 
 	return $maturity;
 }
