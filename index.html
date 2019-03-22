@@ -2,10 +2,10 @@
 <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-	<title>Loading...</title>
+	<title>Markdown</title>
 
+	<meta name="viewport" content="initial-scale=1">
 	<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-	
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
 	
@@ -14,33 +14,156 @@
 
 </head>
 <body>
-	<div id="loader"></div>
-	<div id="error">
-		Ooops! Something wrong happened!
-	</div>
-	<div id="content">
-		
-		<header>
-			<h2 class="name"></h2>
-			
-			<div id="badge-container">
-				<img id="badge" src="https://img.shields.io/badge/pending-none-lightgrey.svg" /><br><br>
-				<input id="badge-markdown" />
-				<button class="btn btn-info" id="copy-markdown">copy markdown code</button>
-			</div>
-		</header>
-		
-		<div id="markdown-content">
-		</div>
-		
-		<div id="rules-content">
-		</div>
-			
-		<footer>
-			<p><b class="name"></b> - Version <b class="version"></b> (<i class="release-at"></i>)</p>
-		</footer>
-		
+	<div id="loader" style="display: block;"></div>
+	
+	<div id="error" style="display: none;">Ooops! Something wrong happened!</div>
+	
+    <div id="header" style="display: none;" class="page-header px-10">
+	  <h1>Maturity Calculator <small>A beautiful tool to measure your projects quality and maturity :)</small></h1>
 	</div>
 
+	<div id="content" style="display: none;">
+		<div id="generator" style="display: none;">
+		  <ul class="nav nav-tabs" role="tablist">
+		    <li role="presentation" class="active">
+		    	<a href="#project" aria-controls="project" role="tab" data-toggle="tab">GitHub</a>
+		    </li>
+		    <li role="presentation">
+		    	<a href="#manually" aria-controls="manually" role="tab" data-toggle="tab">Manually</a>
+		    </li>
+		  </ul>
+
+		  <div class="tab-content p-5">
+		    <div role="tabpanel" class="tab-pane active" id="project">
+		    	
+		    	<h4>Generate maturity by github project(s);</h4>
+
+				<div class="input-group mt-10">
+				  <span class="input-group-addon">Projects <span class="glyphicon glyphicon-question-sign tooltip-icon" data-toggle="tooltip" data-placement="right" title="You can set one or more project separating by pipe '|'."></span></span>
+				  <input type="text" class="form-control" placeholder="org-name/project-name" id="project-project" />
+				</div>
+
+				<div class="input-group mt-10">
+				  <span class="input-group-addon">Token <span class="glyphicon glyphicon-question-sign tooltip-icon" data-toggle="tooltip" data-placement="right" title="GitHub personal access token"></span></span>
+				  <input type="text" class="form-control" placeholder="1a412346761234c71234601a7321234411991234" id="project-token" />
+				</div>
+
+				<button type="button" id="project-button" class="btn btn-primary mt-10">
+					Generate!
+				</button>
+
+			</div>
+		    
+		    <div role="tabpanel" class="tab-pane" id="manually">
+		    	
+				<h4>Generate maturity by json version rules and topic codes;</h4>
+
+		    	<div class="input-group mt-10">
+				  <span class="input-group-addon">Version</span>
+				  <input type="text" class="form-control" placeholder="http://xpto.com/maturity-v1.json" id="manually-version" />
+				</div>
+
+				<div class="input-group mt-10">
+				  <span class="input-group-addon">Codes</span>
+				  <input type="text" class="form-control" placeholder="MT01|MT02" id="manually-codes" />
+				</div>
+
+				<button type="button" id="manually-button" class="btn btn-primary mt-10">
+					Generate!
+				</button>
+
+		    </div>
+		    
+		  </div>
+		</div>
+
+		<div id="result" style="display: none;" class="p-5">
+			
+			<h4>Last Result: <img id="result-img" /> <span id="result-img-modified" style="color: red; display: none;" >[modified]</span></h4>
+
+			<div>
+			  <ul class="nav nav-tabs" role="tablist">
+			    <li role="presentation" class="active">
+			    	<a href="#info" aria-controls="info" id="tab-info" role="tab" data-toggle="tab">Maturity</a>
+			    </li>
+			    <li role="presentation">
+			    	<a href="#badge" aria-controls="badge" id="tab-badge" role="tab" data-toggle="tab">Markdown</a>
+			    </li>
+			    <li role="presentation">
+			    	<a href="#send-pr" aria-controls="send-pr"  id="tab-send-pr" role="tab" data-toggle="tab">Update</a>
+			    </li>
+			     <li role="presentation">
+			    	<a href="#raw" aria-controls="raw" role="tab" id="tab-raw" data-toggle="tab">Raw</a>
+			    </li>
+			  </ul>
+
+			  <div class="tab-content p-5">
+			    <div role="tabpanel" class="tab-pane active" id="info">
+			    	<div id="maturity-details" class="pt-10"></div> 
+			    </div>
+			    <div role="tabpanel" class="tab-pane pt-10" id="badge">
+			    	<p>Badge:</p>
+			    	<input class="form-control mt-10" readonly type="text" style="width: 100%;" id="markdown-badge" />
+			    	<button class="btn btn-info mt-10" id="copy-markdown-badge">copy markdown code</button>
+			    	<hr/>
+			    	<div id="maturity-markdown">
+				    	<p>Maturity:</p>
+				    	<textarea class="form-control mt-10" style="height: 200px;" readonly type="text" style="width: 100%;" id="markdown-version" /></textarea>
+				    	<button class="btn btn-info mt-10" id="copy-markdown-version">copy markdown code</button>
+				    </div>
+			    </div>
+			    <div role="tabpanel" class="tab-pane pt-10" id="send-pr">
+			    	<h4>Creates pull request with new maturity info;</h4>
+
+			    	<div id="send-pr-manually-mode" style="display: none;">
+			    		<div class="input-group mt-10">
+						  <span class="input-group-addon">Project </span>
+						  <input type="text" class="form-control" placeholder="org-name/project-name" id="pr-project" />
+						</div>
+
+						<div class="input-group mt-10">
+						  <span class="input-group-addon">Token </span>
+						  <input type="text" class="form-control" placeholder="1a412346761234c71234601a7321234411991234" id="pr-token" />
+						</div>
+			    	</div>
+
+			    	<div class="input-group mt-10">
+					  <span class="input-group-addon">Version</span>
+					  <input type="text" class="form-control" placeholder="http://xpto.com/maturity-v1.json" id="pr-version" />
+					</div>
+
+					<div class="input-group mt-10">
+					  <span class="input-group-addon">Branch</span>
+					  <input type="text" class="form-control" placeholder="master" value="master" id="pr-branch" />
+					</div>
+
+					<div class="input-group mt-10">
+					  <span class="input-group-addon">Tag</span>
+					  <input type="text" class="form-control" placeholder="computer, sad, " value="happy" id="pr-tag" />
+					</div>
+
+					<div class="input-group mt-10">
+					  <input class="pr-10" type="checkbox" value="true" id="pr-ignore" />
+					  <span>&nbsp;Ignore</span>
+					</div>
+
+					<button type="button" id="pr-button" class="btn btn-primary mt-10">
+						Create pull request!
+					</button>
+
+					<div id="pr-link" class="mt-15 p-5"></div>
+	
+			    </div>
+			     <div role="tabpanel" class="tab-pane" id="raw">
+			    	<pre id="result-pre" class="pt-10"></pre>
+			    </div>
+			  </div>
+		    </div>
+        </div>
+    </div>
+
+	<footer id="footer">
+		<p><b class="name"></b> - Version <b class="version"></b> (<i class="release-at"></i>)</p>
+	</footer>
 </body>
 </html>
