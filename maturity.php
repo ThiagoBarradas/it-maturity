@@ -28,7 +28,9 @@ function showBadgeImage($data)
 {
 	$image_url = $data["maturity"]["badge"];
 	$image = file_get_contents($image_url); 
-
+	
+	header('Cache-Control: no-cache');
+	header('Expires: ' . gmdate('D, d M Y H:i:s \G\M\T', time() - 36000));
 	header("Content-Type: image/svg+xml;charset=utf-8");
 	echo $image; 
 	exit;
@@ -57,7 +59,9 @@ function getBadgeMarkdown($data)
 	$image_url = $data["maturity"]["badge"];
 	$current_url = getCurrentUrl("details");
 
-	return "[![$label]($current_url&command=badge_image)]($current_url)"; 
+	$view_url = str_replace("maturity.php", "index.html", $current_url);
+
+	return "[![$label]($current_url&command=badge_image)]($view_url)"; 
 }
 
 function showMaturity($data) 
