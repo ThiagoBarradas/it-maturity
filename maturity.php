@@ -29,8 +29,8 @@ function showBadgeImage($data)
 	$image_url = $data["maturity"]["badge"];
 	$image = file_get_contents($image_url); 
 	
-	header('Cache-Control: no-cache');
-	header('Expires: ' . gmdate('D, d M Y H:i:s \G\M\T', time() - 36000));
+	header('Cache-Control: max-age=0, no-cache');
+	header('Pragma: no-cache');
 	header("Content-Type: image/svg+xml;charset=utf-8");
 	echo $image; 
 	exit;
