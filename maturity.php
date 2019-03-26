@@ -396,7 +396,7 @@ function createPullRequestComplete($data)
 		$readmeFileSha = getFileBlobSha($data["project"], $data["token"], "README.md", $newBranch);
 		$readmeFileContent = getFileContent($data["project"], $data["token"], "README.md", $newBranch);
 
-		if ($readmeFileContent == null)
+		if ($readmeFileContent == null || $readmeFileSha == null)
 		{
 			$readmeFileContent = "";
 		}
