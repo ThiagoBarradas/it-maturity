@@ -114,6 +114,8 @@ function getData()
 		$data["new_ignore"] = $new_ignore;
 		$data["include"] = $include;
 
+		$project = str_replace("https://github.com/", "", $project);
+
 		$data["token"] = $token;
 		$data["project"] = $project;
 		$data["title"] = $project;
@@ -129,7 +131,7 @@ function getData()
 	{
 		$data["type"] = "projects";
 		$data["token"] = $token;
-		$data["projects"] = explode("|", $projects);
+		$data["projects"] = explode("|", str_replace("https://github.com/", "", $projects));
 		$data["title"] = $projects;
 		$temp = getProjectsMaturityData($data["projects"], $token);	
 		$data["maturity_data"] = $temp["maturity_data"] ;
