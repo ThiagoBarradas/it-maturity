@@ -54,6 +54,7 @@ $(document).ready(function() {
 		var tag = $("#pr-tag").val();
 		var branch = $("#pr-branch").val();
 		var new_ignore = $("#pr-ignore").is(":checked") === true ? "true" : "false"; 
+		var include = $("#pr-include").is(":checked") === true ? "true" : "false"; 
 		var new_version = $("#pr-version").val();
 		var new_codes = globalCodes.filter(Boolean).join("|");
 		var project = lastResult.project;
@@ -69,7 +70,7 @@ $(document).ready(function() {
 		$("#header").fadeOut();
 		$("#footer").fadeOut();
 
-		var url = getUrl() + "?command=pull_request&project=" + project + "&token=" + token + "&new_version_json=" + new_version + "&new_codes=" + new_codes + "&branch=" + branch + "&new_ignore=" + new_ignore + "&tag=" + tag;
+		var url = getUrl() + "?command=pull_request&project=" + project + "&token=" + token + "&new_version_json=" + new_version + "&new_codes=" + new_codes + "&branch=" + branch + "&new_ignore=" + new_ignore + "&tag=" + tag + "&include=" + include;
 		
 		$.getJSON(url).done(function(data) {
 			$("#pr-link").html("<a href=\""+data.pr_url+"\" target=\"_blank\">" + data.pr_url + "</a>");
@@ -318,7 +319,9 @@ function showMarkdown(data) {
 				$("#markdown-version").append(" > - #### " + category + "\n");
 			}
 			
-			$("#markdown-version").append(" >   - [ ] [" + description + "](" + details + ")\n");
+			var marked = globalCodes.includes(code) ? "[x]" : "[ ]" ;
+
+			$("#markdown-version").append(" >   - " + marked + " [" + description + "](" + details + ")\n");
 			
 			lastCategory = category;
 		}

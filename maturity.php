@@ -59,6 +59,18 @@ function getBadgeMarkdown($data)
 	$image_url = $data["maturity"]["badge"];
 	$current_url = getCurrentUrl("details");
 
+	if ($data["private"] === false || !isset($data))	
+	{
+		$current_url = str_replace("&token=" . $data["token"], "", $current_url);
+	}
+
+	$current_url = str_replace("&include=" . $data["include"], "", $current_url);
+	$current_url = str_replace("&branch=" . $data["branch"], "", $current_url);
+	$current_url = str_replace("&new_codes=" . $data["original_new_codes"], "", $current_url);
+	$current_url = str_replace("&new_ignore=" . $data["new_ignore"], "", $current_url);
+	$current_url = str_replace("&tag=" . $data["tag"], "", $current_url);
+	$current_url = str_replace("&new_version_json=" . $data["new_version_json"], "", $current_url);
+
 	$view_url = str_replace("maturity.php", "index.html", $current_url);
 	$view_url = str_replace("projects=", "project=", $view_url);
 
@@ -82,7 +94,8 @@ function getData()
 	$json =  getQueryProperty("json");
 	$codes =  getQueryProperty("codes");
 	$title = getQueryProperty("title");
-	
+
+	$include = getQueryProperty("include");
 	$new_codes = getQueryProperty("new_codes");
 	$new_ignore = getQueryProperty("new_ignore");
 	$new_version_json = getQueryProperty("new_version_json");
@@ -93,16 +106,19 @@ function getData()
 	$data["type"] = "undefined";
 	if ($project != null) 
 	{
+		$data["private"] = getProjectIsPrivate($project, $token);
 		$data["type"] = "project";
 		$data["tag"] = isset($tag) ? $tag : "happy";
 
 		$data["new_version_json"] = $new_version_json;
 		$data["new_ignore"] = $new_ignore;
+		$data["include"] = $include;
 
 		$data["token"] = $token;
 		$data["project"] = $project;
 		$data["title"] = $project;
 		$data["branch"] = isset($branch) ? $branch : "master";
+		$data["original_new_codes"] = $new_codes;
 		$data["new_codes"] = explode("|", $new_codes);
 		$data["maturity_data"] = getProjectMaturityData($project, $token);
 		$data["maturity_model"] = getMaturityModel($data["maturity_data"]["version_json"]);
@@ -144,28 +160,39 @@ function getProjectMaturityData($project, $token)
 {
 	$url = "https://api.github.com/repos/" . $project . "/contents/maturity.json";
 
-	$ch = curl_init();
+	$response = CURL("GET", $url, $token, "application/vnd.github.v3.raw", null);
 
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	curl_setopt($ch, CURLOPT_URL, $url);
-	curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-	    'Authorization: token ' . $token,
-	    'Accept: application/vnd.github.v3.raw'
-	));
-
-	$curl_version = curl_version();
-	curl_setopt($ch, CURLOPT_USERAGENT, 'curl/' . $curl_version['version']);
-
-	$result = curl_exec($ch);
-	$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-	curl_close($ch);
+	$result = $response["result"];
+	$code = $response["code"];
 
 	if ($code == 200) {
 		return json_decode($result, true);
 	}
 
 	return null;
+}
+
+function getProjectIsPrivate($project, $token) 
+{
+	$url = "https://api.github.com/repos/" . $project;
+
+	$response = CURL("GET", $url, $token, "*", null);
+
+	$result = $response["result"];
+	$code = $response["code"];
+
+	if ($code == 200) {
+		$parsed = json_decode($result, true);
+
+		if (isset($parsed["private"]))
+		{
+			return $parsed["private"];
+		}
+
+		return true;
+	}
+
+	return true;
 }
 
 function getProjectsMaturityData($projects, $token) 
@@ -299,18 +326,10 @@ function getBadgeUrl($result)
 
 function getMaturityModel($version_url) 
 {
-	$ch = curl_init();
+	$response = CURL("GET", $version_url, $token, "application/json", null);
 
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	curl_setopt($ch, CURLOPT_URL, $version_url);
-
-	$curl_version = curl_version();
-	curl_setopt($ch, CURLOPT_USERAGENT, 'curl/' . $curl_version['version']);
-
-	$result = curl_exec($ch);
-	$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-	
-	curl_close($ch);
+	$result = $response["result"];
+	$code = $response["code"];
 
 	return json_decode($result, true);
 }
@@ -358,6 +377,9 @@ function createPullRequestComplete($data)
 	$content = $data["maturity_data"];
 	$content["codes"] = $data["new_codes"];
 	$content["ignore"] = ($data["new_ignore"] == "true") ? true : false;
+	$content["include"] = ($data["include"] == "true") ? true : false;
+	$content["private"] = ($data["private"] == "true") ? true : false;
+
 	if (isset($data["new_version_json"])) {
 		$content["version_json"] = $data["new_version_json"];
 	}
@@ -365,8 +387,23 @@ function createPullRequestComplete($data)
 	$content_string = json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
 
 	$fileSha = getFileBlobSha($data["project"], $data["token"], $path, $newBranch);
+	$success = upsertFile($data["project"], $data["token"], $content_string, $path, $fileSha, $newBranch, "Update maturity info");
 
-	$success = upsertFile($data["project"], $data["token"], $content_string, $path, $fileSha, $newBranch);
+	if ($content["include"] === true)
+	{
+		$readmeFileSha = getFileBlobSha($data["project"], $data["token"], "README.md", $newBranch);
+		$readmeFileContent = getFileContent($data["project"], $data["token"], "README.md", $newBranch);
+
+		if ($readmeFileContent == null)
+		{
+			$readmeFileContent = "";
+		}
+
+		$readmeFileContent = getBadgeMarkdown($data) . "\n\n" . $readmeFileContent;
+		
+		$readmeSuccess = upsertFile($data["project"], $data["token"], $readmeFileContent, "README.md", $readmeFileSha, $newBranch, "Includes maturity badge");
+	}
+
 	if (!$success) 
 	{
 		returnBadRequest("error updating file");
@@ -408,25 +445,10 @@ function createPullRequest($project, $token, $srcBranch, $destBranch, $gifTag)
 
 	$data_string = json_encode($data);                                                                                   
 
-	$ch = curl_init();
+	$response = CURL("POST", $url, $token, "application/vnd.github.shadow-cat-preview", "application/json", $data_string);
 
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST"); 
-	curl_setopt($ch, CURLOPT_URL, $url);
-	curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);                                                                  
-	curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-	    'Authorization: token ' . $token,
-	    'Content-Type: application/json',
-	    'Accept: application/vnd.github.shadow-cat-preview'
-	));
-
-	$curl_version = curl_version();
-	curl_setopt($ch, CURLOPT_USERAGENT, 'curl/' . $curl_version['version']);
-
-	$result = curl_exec($ch);
-	$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-	curl_close($ch);
+	$result = $response["result"];
+	$code = $response["code"];
 
 	$resultObj = json_decode($result);
 
@@ -458,22 +480,10 @@ function getFileBlobSha($project, $token, $path, $branch)
 {
 	$url = "https://api.github.com/repos/" . $project . "/contents/" . $path . "?ref=" . $branch;
 
-	$ch = curl_init();
+	$response = CURL("GET", $url, $token, "*", null, null);
 
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	curl_setopt($ch, CURLOPT_URL, $url);
-	curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-	    'Authorization: token ' . $token,
-	    'Accept: *'
-	));
-
-	$curl_version = curl_version();
-	curl_setopt($ch, CURLOPT_USERAGENT, 'curl/' . $curl_version['version']);
-
-	$result = curl_exec($ch);
-	$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-	curl_close($ch);
+	$result = $response["result"];
+	$code = $response["code"];
 
 	$resultObj = json_decode($result);
 
@@ -484,12 +494,24 @@ function getFileBlobSha($project, $token, $path, $branch)
 	return null;
 }
 
-function upsertFile($project, $token, $content, $path, $sha, $branch) 
+function getFileContent($project, $token, $path, $branch)
+{
+	$url = "https://api.github.com/repos/" . $project . "/contents/" . $path . "?ref=" . $branch;
+
+	$response = CURL("GET", $url, $token, "application/vnd.github.VERSION.raw", null, null);
+
+	$result = $response["result"];
+	$code = $response["code"];
+
+	return $result;
+}
+
+function upsertFile($project, $token, $content, $path, $sha, $branch, $message) 
 {
 	$url = "https://api.github.com/repos/" . $project . "/contents/" . $path;
 
 	$data = array(
-		"message" => "Update maturity info",
+		"message" => $message,
 		"commit" => array(
 			"name" => "Thiago Barradas",
 			"email" => "thiagobrowskt@gmail.com"
@@ -504,25 +526,10 @@ function upsertFile($project, $token, $content, $path, $sha, $branch)
 
 	$data_string = json_encode($data);                                                                                   
 
-	$ch = curl_init();
+	$response = CURL("PUT", $url, $token, "*", "application/json", $data_string);
 
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT"); 
-	curl_setopt($ch, CURLOPT_URL, $url);
-	curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);                                                                  
-	curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-	    'Authorization: token ' . $token,
-	    'Content-Type: application/json',
-	    'Accept: *'
-	));
-
-	$curl_version = curl_version();
-	curl_setopt($ch, CURLOPT_USERAGENT, 'curl/' . $curl_version['version']);
-
-	$result = curl_exec($ch);
-	$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-	curl_close($ch);
+	$result = $response["result"];
+	$code = $response["code"];
 
 	return $code == 200 || $code == 201;
 }
@@ -538,25 +545,10 @@ function createBranch($project, $token, $sha, $newBranch)
 
 	$data_string = json_encode($data);                                                                                   
 
-	$ch = curl_init();
+	$response = CURL("POST", $url, $token, "*", "application/json", $data_string);
 
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST"); 
-	curl_setopt($ch, CURLOPT_URL, $url);
-	curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);                                                                  
-	curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-	    'Authorization: token ' . $token,
-	    'Content-Type: application/json',
-	    'Accept: *'
-	));
-
-	$curl_version = curl_version();
-	curl_setopt($ch, CURLOPT_USERAGENT, 'curl/' . $curl_version['version']);
-
-	$result = curl_exec($ch);
-	$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-	curl_close($ch);
+	$result = $response["result"];
+	$code = $response["code"];
 
 	$resultObj = json_decode($result);
 
@@ -571,22 +563,10 @@ function getBranchRef($project, $token, $branch)
 {
 	$url = "https://api.github.com/repos/" . $project . "/git/refs/heads/" . $branch;
 
-	$ch = curl_init();
+	$response = CURL("GET", $url, $token, "*", null, null);
 
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	curl_setopt($ch, CURLOPT_URL, $url);
-	curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-	    'Authorization: token ' . $token,
-	    'Accept: *'
-	));
-
-	$curl_version = curl_version();
-	curl_setopt($ch, CURLOPT_USERAGENT, 'curl/' . $curl_version['version']);
-
-	$result = curl_exec($ch);
-	$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-	curl_close($ch);
+	$result = $response["result"];
+	$code = $response["code"];
 
 	$resultObj = json_decode($result);
 
@@ -620,21 +600,10 @@ function getRandGifUrl($tag)
 	$url .= "&rating=pg-13";
 	$url .= "&tag=" . $tag;
 
-	$ch = curl_init();
+	$response = CURL("GET", $url, null, "application/json", "application/json");
 
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	curl_setopt($ch, CURLOPT_URL, $url);
-	curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-	    'Accept: application/json'
-	));
-
-	$curl_version = curl_version();
-	curl_setopt($ch, CURLOPT_USERAGENT, 'curl/' . $curl_version['version']);
-
-	$result = curl_exec($ch);
-	$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-	curl_close($ch);
+	$result = $response["result"];
+	$code = $response["code"];
 
 	$resultObj = json_decode($result);
 
@@ -644,5 +613,48 @@ function getRandGifUrl($tag)
 
 	return null;
 }
+
+function CURL($method, $url, $token, $accept, $contentType, $data_string = null)
+{
+	$ch = curl_init();
+
+	if (isset($method) && $method != trim("GET") && trim($method) != "") 
+	{
+		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method); 
+	}
+
+	$headers = array('Accept: ' . $accept);
+	if (isset($contentType) && trim($contentType) != "")
+	{
+		array_push($headers, 'Content-Type: ' . $contentType);
+	}
+
+	if (isset($token) && trim($token) != "")
+	{
+		array_push($headers, 'Authorization: token ' . trim($token));
+	}
+
+	if (isset($data_string) && trim($data_string) != "")
+	{
+		curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);
+	}
+
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	curl_setopt($ch, CURLOPT_URL, $url);
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+	$curl_version = curl_version();
+	curl_setopt($ch, CURLOPT_USERAGENT, 'curl/' . $curl_version['version']);
+
+	$result = curl_exec($ch);
+	$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+	curl_close($ch);
+
+	return array(
+		"result" => $result,
+		"code" => $code);
+}
+
 
 ?>
