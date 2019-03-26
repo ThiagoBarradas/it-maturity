@@ -60,10 +60,8 @@ $(document).ready(function() {
 		var project = lastResult.project;
 		var token = lastResult.token;
 		
-		if (mode == "manually") {
-			project = $("#pr-project").val();
-			token = $("#pr-token").val();
-		}
+		project = $("#pr-project").val();
+		token = $("#pr-token").val();
 
 		$("#loader").fadeIn();
 		$("#content").fadeOut();
@@ -226,6 +224,13 @@ function showTitle(data) {
 		$("#send-pr-manually-mode").hide();
 		$("#tab-projects").hide();
 		$("#header h1").html("maturity for <b><a target=\"_blank\" href=\"https://github.com/" + data.project + "\">" + data.project + "</a></b>");
+
+		$("#pr-project").val(data.project);
+		$("#pr-token").val(data.token);
+
+		if (data.token == null || data.token == "") {
+			$("#send-pr-manually-mode").show();			
+		}
 	} else {
 		mode = "manually";
 		$("#send-pr-manually-mode").show();
