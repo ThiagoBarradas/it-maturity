@@ -379,14 +379,16 @@ function createPullRequestComplete($data)
 	$content = $data["maturity_data"];
 	$content["codes"] = $data["new_codes"];
 	$content["ignore"] = ($data["new_ignore"] == "true") ? true : false;
-	$content["include"] = ($data["include"] == "true") ? true : false;
-	$content["private"] = ($data["private"] == "true") ? true : false;
+	$include = ($data["include"] == "true") ? true : false;
+	$private = ($data["private"] == "true") ? true : false;
 
 	if (isset($data["new_version_json"])) {
 		$content["version_json"] = $data["new_version_json"];
 	}
 
 	$content_string = json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+	$content["private"] = $private;
+	$content["include"] = $include;
 
 	$fileSha = getFileBlobSha($data["project"], $data["token"], $path, $newBranch);
 	$success = upsertFile($data["project"], $data["token"], $content_string, $path, $fileSha, $newBranch, "Update maturity info");
